@@ -119,32 +119,34 @@ public final class JBossEJBProperties implements Contextual<JBossEJBProperties> 
         final String filePathPropertyName = "jboss.ejb.client.properties.file.path";
         CONFIGURED_PATH_NAME = doPrivileged((PrivilegedAction<String>) () -> System.getProperty(filePathPropertyName));
         final AtomicReference<JBossEJBProperties> onceRef = new AtomicReference<>();
-        CONTEXT_MANAGER.setGlobalDefaultSupplier(() -> {
-            JBossEJBProperties value = onceRef.get();
-            if (value == null) {
-                synchronized (onceRef) {
-                    value = onceRef.get();
-                    if (value == null) {
-                        try {
-                            if (CONFIGURED_PATH_NAME != null) try {
-                                File propertiesFile = new File(CONFIGURED_PATH_NAME);
-                                if (! propertiesFile.isAbsolute()) {
-                                    propertiesFile = new File(System.getProperty("user.dir"), propertiesFile.toString());
+        CONTEXT_MANAGER.setGlobalDefaultSupplier(new Supplier<JBossEJBProperties>() {
+            public JBossEJBProperties get() {
+                JBossEJBProperties value = onceRef.get();
+                if (value == null) {
+                    synchronized (onceRef) {
+                        value = onceRef.get();
+                        if (value == null) {
+                            try {
+                                if (CONFIGURED_PATH_NAME != null) try {
+                                    File propertiesFile = new File(CONFIGURED_PATH_NAME);
+                                    if (! propertiesFile.isAbsolute()) {
+                                        propertiesFile = new File(System.getProperty("user.dir"), propertiesFile.toString());
+                                    }
+                                    value = JBossEJBProperties.fromFile(propertiesFile);
+                                } catch (IOException e) {
+                                    Logs.MAIN.failedToFindEjbClientConfigFileSpecifiedBySysProp(filePathPropertyName, e);
+                                    value = JBossEJBProperties.fromClassPath();
+                                } else {
+                                    value = JBossEJBProperties.fromClassPath();
                                 }
-                                value = JBossEJBProperties.fromFile(propertiesFile);
                             } catch (IOException e) {
-                                Logs.MAIN.failedToFindEjbClientConfigFileSpecifiedBySysProp(filePathPropertyName, e);
-                                value = JBossEJBProperties.fromClassPath();
-                            } else {
-                                value = JBossEJBProperties.fromClassPath();
                             }
-                        } catch (IOException e) {
+                            onceRef.set(value);
                         }
-                        onceRef.set(value);
                     }
                 }
+                return value;
             }
-            return value;
         });
     }
 

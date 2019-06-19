@@ -141,10 +141,12 @@ public final class EJBReceiverInvocationContext extends AbstractReceiverInvocati
              * @param cause the failure cause
              */
             public Failed(final Exception cause) {
-                this(() -> {
-                    final StackTraceElement[] stackTrace = new Throwable().getStackTrace();
-                    cause.setStackTrace(Arrays.copyOfRange(stackTrace, 2, stackTrace.length));
-                    return cause;
+                this(new Supplier<Exception>() {
+                    public Exception get() {
+                        final StackTraceElement[] stackTrace = new Throwable().getStackTrace();
+                        cause.setStackTrace(Arrays.copyOfRange(stackTrace, 2, stackTrace.length));
+                        return cause;
+                    }
                 });
                 Assert.checkNotNullParam("cause", cause);
             }

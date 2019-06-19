@@ -64,13 +64,15 @@ public interface DiscoveredURISelector {
     static DiscoveredURISelector favorite(Collection<URI> favorites, DiscoveredURISelector fallback) {
         Assert.checkNotNullParam("favorites", favorites);
         Assert.checkNotNullParam("fallback", fallback);
-        return (eligibleUris, locator) -> {
-            for (URI favorite : favorites) {
-                if (eligibleUris.contains(favorite)) {
-                    return favorite;
+        return new DiscoveredURISelector() {
+            public URI selectNode(List<URI> eligibleUris, EJBLocator<?> locator) {
+                for (URI favorite : favorites) {
+                    if (eligibleUris.contains(favorite)) {
+                        return favorite;
+                    }
                 }
+                return fallback.selectNode(eligibleUris, locator);
             }
-            return fallback.selectNode(eligibleUris, locator);
         };
     }
 

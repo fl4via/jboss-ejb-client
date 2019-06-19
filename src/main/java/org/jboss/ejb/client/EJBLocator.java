@@ -450,9 +450,11 @@ public abstract class EJBLocator<T> implements Serializable {
         if (System.getSecurityManager() == null) {
             field.setAccessible(flag);
         } else {
-            AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
-                field.setAccessible(flag);
-                return null;
+            AccessController.doPrivileged(new PrivilegedAction<Void>() {
+                public Void run() {
+                    field.setAccessible(flag);
+                    return null;
+                }
             });
         }
     }

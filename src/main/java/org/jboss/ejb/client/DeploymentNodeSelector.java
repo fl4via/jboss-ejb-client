@@ -64,15 +64,17 @@ public interface DeploymentNodeSelector {
     static DeploymentNodeSelector favorite(Collection<String> favorites, DeploymentNodeSelector fallback) {
         Assert.checkNotNullParam("favorites", favorites);
         Assert.checkNotNullParam("fallback", fallback);
-        return (eligibleNodes, appName, moduleName, distinctName) -> {
-            final HashSet<String> set = new HashSet<String>(eligibleNodes.length);
-            Collections.addAll(set, eligibleNodes);
-            for (String favorite : favorites) {
-                if (set.contains(favorite)) {
-                    return favorite;
+        return new DeploymentNodeSelector() {
+            public String selectNode(String[] eligibleNodes, String appName, String moduleName, String distinctName) {
+                final HashSet<String> set = new HashSet<String>(eligibleNodes.length);
+                Collections.addAll(set, eligibleNodes);
+                for (String favorite : favorites) {
+                    if (set.contains(favorite)) {
+                        return favorite;
+                    }
                 }
+                return fallback.selectNode(eligibleNodes, appName, moduleName, distinctName);
             }
-            return fallback.selectNode(eligibleNodes, appName, moduleName, distinctName);
         };
     }
 

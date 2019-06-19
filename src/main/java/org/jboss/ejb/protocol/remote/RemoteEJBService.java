@@ -24,6 +24,7 @@ import static org.jboss.ejb.protocol.remote.TCCLUtils.resetTCCL;
 import static org.xnio.IoUtils.safeClose;
 
 import java.io.IOException;
+import java.util.function.BiConsumer;
 
 import org.jboss.ejb.server.Association;
 import org.jboss.ejb.server.ListenerHandle;
@@ -75,11 +76,13 @@ public final class RemoteEJBService {
                                 return;
                             }
                             final EJBServerChannel serverChannel = new EJBServerChannel(transactionService.getServerForConnection(channel.getConnection()), channel, version, messageTracker);
-                            callbackBuffer.addListener((sc, a) -> {
-                                final ListenerHandle handle1 = a.registerClusterTopologyListener(sc.createTopologyListener());
-                                final ListenerHandle handle2 = a.registerModuleAvailabilityListener(sc.createModuleListener());
-                                channel.receiveMessage(sc.getReceiver(a, handle1, handle2));
-                            }, serverChannel, association);
+                            callbackBuffer.addListener(new Runnable() {
+                                public void run() {
+                                    final ListenerHandle handle1 = association.registerClusterTopologyListener(serverChannel.createTopologyListener());
+                                    final ListenerHandle handle2 = association.registerModuleAvailabilityListener(serverChannel.createModuleListener());
+                                    channel.receiveMessage(serverChannel.getReceiver(association, handle1, handle2));
+                                    }
+                            });
                         } finally {
                             resetTCCL(oldCL);
                         }

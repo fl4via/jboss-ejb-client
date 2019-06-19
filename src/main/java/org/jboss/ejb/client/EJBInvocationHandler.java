@@ -51,12 +51,14 @@ final class EJBInvocationHandler<T> extends Attachable implements InvocationHand
     private static final Supplier<Discovery> DISCOVERY_SUPPLIER = doPrivileged((PrivilegedAction<Supplier<Discovery>>) Discovery.getContextManager()::getPrivilegedSupplier);
 
     private static final int MAX_RETRIES =
-            AccessController.doPrivileged((PrivilegedAction<Integer>) () -> {
-                String val = System.getProperty("org.jboss.ejb.client.max-retries");
-                try {
-                    return Integer.valueOf(val);
-                } catch (NumberFormatException e) {
-                    return 8;
+            AccessController.doPrivileged(new PrivilegedAction<Integer>() {
+                public Integer run() {
+                    String val = System.getProperty("org.jboss.ejb.client.max-retries");
+                    try {
+                        return Integer.valueOf(val);
+                    } catch (NumberFormatException e) {
+                        return 8;
+                    }
                 }
             });
 

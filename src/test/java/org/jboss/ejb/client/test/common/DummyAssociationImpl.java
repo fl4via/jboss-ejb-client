@@ -120,36 +120,46 @@ public class DummyAssociationImpl implements Association {
 
         // this is a simpler cancellaction flag than required (see CancellationFlag)
         final AtomicBoolean cancelled = new AtomicBoolean();
-        Runnable runnable = () -> {
-            // for handling cancellationof the invocation
-            if (cancelled.get()) {
-                if (!oneWay) invocationRequest.writeCancelResponse();
-                return;
-            }
+        Runnable runnable = new Runnable () {
+            public void run() {
 
-            // invoke the method here
-            Object retVal = null;
-            try {
-                retVal = invokedMethod.invoke(bean, requestContent.getParameters());
-            } catch (IllegalAccessException iae) {
-                // handle IllegalAccess Exception
-                logger.errorf("Exception occurred when invoking method %s: %s", invokedMethod.getName(), iae.getMessage());
-                Exception exceptionToWrite = new EJBException(iae.getLocalizedMessage());
-                invocationRequest.writeException(exceptionToWrite);
-                return ;
-            } catch (InvocationTargetException ite) {
-                // handle InvocationtargetException
-                logger.errorf("Exception occurred when invoking method %s: %s", invokedMethod.getName(), ite.getMessage());
-                Exception exceptionToWrite = new EJBException(ite.getLocalizedMessage());
-                invocationRequest.writeException(exceptionToWrite);
-                return ;
-            }
+                // for handling cancellationof the invocation
+                if (cancelled.get()) {
+                    if (!oneWay) invocationRequest.writeCancelResponse();
+                    return;
+                }
 
-            // invocation was successful - prepare the result
-            if (! oneWay) {
-                // attach any weak affinity if available
-                // TODO
-                requestContent.writeInvocationResult(retVal);
+                // invoke the method here
+                Object retVal = null;
+                try {
+                    retVal = invokedMethod
+                            .invoke(bean, requestContent.getParameters());
+                } catch (IllegalAccessException iae) {
+                    // handle IllegalAccess Exception
+                    logger.errorf(
+                            "Exception occurred when invoking method %s: %s",
+                            invokedMethod.getName(), iae.getMessage());
+                    Exception exceptionToWrite = new EJBException(
+                            iae.getLocalizedMessage());
+                    invocationRequest.writeException(exceptionToWrite);
+                    return;
+                } catch (InvocationTargetException ite) {
+                    // handle InvocationtargetException
+                    logger.errorf(
+                            "Exception occurred when invoking method %s: %s",
+                            invokedMethod.getName(), ite.getMessage());
+                    Exception exceptionToWrite = new EJBException(
+                            ite.getLocalizedMessage());
+                    invocationRequest.writeException(exceptionToWrite);
+                    return;
+                }
+
+                // invocation was successful - prepare the result
+                if (!oneWay) {
+                    // attach any weak affinity if available
+                    // TODO
+                    requestContent.writeInvocationResult(retVal);
+                }
             }
         };
         execute(invocationRequest, runnable, false);
@@ -213,15 +223,17 @@ public class DummyAssociationImpl implements Association {
 
         // now invoke the bean, get the result, return the result
         final AtomicBoolean cancelled = new AtomicBoolean();
-        Runnable runnable = () -> {
-            if (cancelled.get()) {
-                sessionOpenRequest.writeCancelResponse();
-                return;
-            }
-            final UUID uuid = UUID.randomUUID();
-            UUIDSessionID sessionID = new UUIDSessionID(uuid);
+        Runnable runnable = new Runnable() {
+            public void run() {
+                if (cancelled.get()) {
+                    sessionOpenRequest.writeCancelResponse();
+                    return;
+                }
+                final UUID uuid = UUID.randomUUID();
+                UUIDSessionID sessionID = new UUIDSessionID(uuid);
 
-            sessionOpenRequest.convertToStateful(sessionID);
+                sessionOpenRequest.convertToStateful(sessionID);
+            }
         };
         execute(sessionOpenRequest, runnable, false);
         return ignored -> cancelled.set(true);

@@ -492,11 +492,13 @@ final class EJBServerChannel {
             final byte[] bq = new byte[input.readUnsignedByte()];
             input.readFully(bq);
             final int timeout = PackedInteger.readPackedInteger(input);
-            return () -> {
-                try {
-                    return transactionServer.getTransactionService().getTransactionContext().findOrImportTransaction(new SimpleXid(fmt, gtid, bq), timeout);
-                } catch (XAException e) {
-                    throw new SystemException(e.getMessage());
+            return new ExceptionSupplier<ImportResult<?>, SystemException>() {
+                public ImportResult<?> get() throws SystemException {
+                    try {
+                        return transactionServer.getTransactionService().getTransactionContext().findOrImportTransaction(new SimpleXid(fmt, gtid, bq), timeout);
+                    } catch (XAException e) {
+                        throw new SystemException(e.getMessage());
+                    }
                 }
             };
         } else {
@@ -845,12 +847,14 @@ final class EJBServerChannel {
                                             ((UserTransactionID) transactionId).getId(), ContextTransactionManager.getGlobalDefaultTransactionTimeout()),
                                             SubordinateTransactionControl.EMPTY, false);
                                 } else if (transactionId instanceof XidTransactionID) {
-                                    transactionSupplier = () -> {
-                                        try {
-                                            return transactionServer.getTransactionService().getTransactionContext().findOrImportTransaction(
-                                                    ((XidTransactionID) transactionId).getXid(), ContextTransactionManager.getGlobalDefaultTransactionTimeout());
-                                        } catch (XAException e) {
-                                            throw new SystemException(e.getMessage());
+                                    transactionSupplier = new ExceptionSupplier<ImportResult<?>, SystemException>() {
+                                        public ImportResult<?> get() throws SystemException {
+                                            try {
+                                                return transactionServer.getTransactionService().getTransactionContext().findOrImportTransaction(
+                                                        ((XidTransactionID) transactionId).getXid(), ContextTransactionManager.getGlobalDefaultTransactionTimeout());
+                                            } catch (XAException e) {
+                                                throw new SystemException(e.getMessage());
+                                            }
                                         }
                                     };
                                 } else {

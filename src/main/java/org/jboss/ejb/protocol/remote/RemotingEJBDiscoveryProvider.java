@@ -92,12 +92,14 @@ final class RemotingEJBDiscoveryProvider implements DiscoveryProvider, Discovere
     private final ConcurrentHashMap<String, URI> effectiveAuthURIs = new ConcurrentHashMap<>();
     
     private static final long DESTINATION_RECHECK_INTERVAL =
-            AccessController.doPrivileged((PrivilegedAction<Long>) () -> {
-                String val = System.getProperty("org.jboss.ejb.client.destination-recheck-interval");
-                try {
-                    return TimeUnit.MILLISECONDS.toNanos(Long.valueOf(val));
-                } catch (NumberFormatException e) {
-                    return TimeUnit.MILLISECONDS.toNanos(5000L);
+            AccessController.doPrivileged(new PrivilegedAction<Long>() {
+                public Long run() {
+                    String val = System.getProperty("org.jboss.ejb.client.destination-recheck-interval");
+                    try {
+                        return TimeUnit.MILLISECONDS.toNanos(Long.valueOf(val));
+                    } catch (NumberFormatException e) {
+                        return TimeUnit.MILLISECONDS.toNanos(5000L);
+                    }
                 }
             });
 

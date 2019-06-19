@@ -103,9 +103,11 @@ public interface ClusterNodeSelector {
      */
     static ClusterNodeSelector useRandomConnectedNode(ClusterNodeSelector fallback) {
         Assert.checkNotNullParam("fallback", fallback);
-        return (clusterName, connectedNodes, totalAvailableNodes) -> {
-            final int length = connectedNodes.length;
-            return length > 0 ? connectedNodes[ThreadLocalRandom.current().nextInt(length)] : fallback.selectNode(clusterName, connectedNodes, totalAvailableNodes);
+        return new ClusterNodeSelector() {
+            public String selectNode(String clusterName, String[] connectedNodes, String[] totalAvailableNodes) {
+                final int length = connectedNodes.length;
+                return length > 0 ? connectedNodes[ThreadLocalRandom.current().nextInt(length)] : fallback.selectNode(clusterName, connectedNodes, totalAvailableNodes);
+            }
         };
     }
 
@@ -149,18 +151,20 @@ public interface ClusterNodeSelector {
      */
     static ClusterNodeSelector useRandomUnconnectedNode(ClusterNodeSelector fallback) {
         Assert.checkNotNullParam("fallback", fallback);
-        return (clusterName, connectedNodes, totalAvailableNodes) -> {
-            if (connectedNodes.length == totalAvailableNodes.length) {
-                // totalAvailableNodes contains all connectedNodes; if their sizes are equal then all nodes must be connected
-                return fallback.selectNode(clusterName, connectedNodes, totalAvailableNodes);
+        return new ClusterNodeSelector() {
+            public String selectNode(String clusterName, String[] connectedNodes, String[] totalAvailableNodes) {
+                if (connectedNodes.length == totalAvailableNodes.length) {
+                    // totalAvailableNodes contains all connectedNodes; if their sizes are equal then all nodes must be connected
+                    return fallback.selectNode(clusterName, connectedNodes, totalAvailableNodes);
+                }
+                final HashSet<String> connected = new HashSet<>(connectedNodes.length);
+                Collections.addAll(connected, connectedNodes);
+                final ArrayList<String> available = new ArrayList<>(totalAvailableNodes.length);
+                Collections.addAll(available, totalAvailableNodes);
+                available.removeAll(connected);
+                assert ! available.isEmpty();
+                return available.get(ThreadLocalRandom.current().nextInt(available.size()));
             }
-            final HashSet<String> connected = new HashSet<>(connectedNodes.length);
-            Collections.addAll(connected, connectedNodes);
-            final ArrayList<String> available = new ArrayList<>(totalAvailableNodes.length);
-            Collections.addAll(available, totalAvailableNodes);
-            available.removeAll(connected);
-            assert ! available.isEmpty();
-            return available.get(ThreadLocalRandom.current().nextInt(available.size()));
         };
     }
 

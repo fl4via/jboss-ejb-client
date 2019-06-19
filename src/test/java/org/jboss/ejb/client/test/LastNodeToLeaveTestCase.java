@@ -195,32 +195,34 @@ public class LastNodeToLeaveTestCase {
         List<Future<?>> retList = new ArrayList<>();
 
         for(int i = 0; i < THREADS; ++i) {
-            retList.add(executorService.submit((Callable<Object>) () -> {
-                // create a proxy
-                final StatelessEJBLocator<Echo> statelessEJBLocator = new StatelessEJBLocator<Echo>(Echo.class, APP_NAME, MODULE_NAME, Echo.class.getSimpleName(), DISTINCT_NAME);
-                final Echo proxy = EJBClient.createProxy(statelessEJBLocator);
+            retList.add(executorService.submit(new Callable<Object>() {
+                public Object call() throws Exception {
+                    // create a proxy
+                    final StatelessEJBLocator<Echo> statelessEJBLocator = new StatelessEJBLocator<Echo>(Echo.class, APP_NAME, MODULE_NAME, Echo.class.getSimpleName(), DISTINCT_NAME);
+                    final Echo proxy = EJBClient.createProxy(statelessEJBLocator);
 
-                EJBClient.setStrongAffinity(proxy, new ClusterAffinity("ejb"));
-                Assert.assertNotNull("Received a null proxy", proxy);
-                logger.info("Created proxy for Echo: " + proxy.toString());
+                    EJBClient.setStrongAffinity(proxy, new ClusterAffinity("ejb"));
+                    Assert.assertNotNull("Received a null proxy", proxy);
+                    logger.info("Created proxy for Echo: " + proxy.toString());
 
-                while (runInvocations) {
-                    logger.info("Invoking on proxy...");
-                    // invoke on the proxy (use a ClusterAffinity for now)
-                    final String message = "hello!";
-                    // one second delay between invocations
-                    Thread.sleep(INVOCATION_DELAY_SECS * 1000);
+                    while (runInvocations) {
+                        logger.info("Invoking on proxy...");
+                        // invoke on the proxy (use a ClusterAffinity for now)
+                        final String message = "hello!";
+                        // one second delay between invocations
+                        Thread.sleep(INVOCATION_DELAY_SECS * 1000);
 
-                    String echo = null;
-                    try {
-                        echo = proxy.echo(message);
-                    } catch(NoSuchEJBException e) {
-                        logger.info("Got NoSuchEJBException from node, skipping...");
-                        echo = message;
+                        String echo = null;
+                        try {
+                            echo = proxy.echo(message);
+                        } catch(NoSuchEJBException e) {
+                            logger.info("Got NoSuchEJBException from node, skipping...");
+                            echo = message;
+                        }
+                        Assert.assertEquals("Got an unexpected echo", echo, message);
                     }
-                    Assert.assertEquals("Got an unexpected echo", echo, message);
+                    return "ok";
                 }
-                return "ok";
             }));
         }
 

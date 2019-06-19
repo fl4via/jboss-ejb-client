@@ -79,25 +79,26 @@ class RetryExecutorWrapper {
 
     private Runnable wrapExecutorThreadWithCallerContext(Runnable runnable, EJBClientContext callerEJBClientContext, Discovery callerDiscovery, AuthenticationContext callerAuthenticationContext) {
 
-        Runnable callerContextTask = () -> {
+        Runnable callerContextTask = new Runnable() {
+            public void run() {
+                // get a copy of the executor thread context
+                EJBClientContext executorEJBClientContext = EJBClientContext.getContextManager().getThreadDefault();
+                Discovery executorDiscovery = Discovery.getContextManager().getThreadDefault();
+                AuthenticationContext executorAuthenticationContext = AuthenticationContext.getContextManager().getThreadDefault();
 
-            // get a copy of the executor thread context
-            EJBClientContext executorEJBClientContext = EJBClientContext.getContextManager().getThreadDefault();
-            Discovery executorDiscovery = Discovery.getContextManager().getThreadDefault();
-            AuthenticationContext executorAuthenticationContext = AuthenticationContext.getContextManager().getThreadDefault();
+                // set the context on the executor thread
+                EJBClientContext.getContextManager().setThreadDefault(callerEJBClientContext);
+                Discovery.getContextManager().setThreadDefault(callerDiscovery);
+                AuthenticationContext.getContextManager().setThreadDefault(callerAuthenticationContext);
 
-            // set the context on the executor thread
-            EJBClientContext.getContextManager().setThreadDefault(callerEJBClientContext);
-            Discovery.getContextManager().setThreadDefault(callerDiscovery);
-            AuthenticationContext.getContextManager().setThreadDefault(callerAuthenticationContext);
+                // run the code
+                runnable.run();
 
-            // run the code
-            runnable.run();
-
-            // reset the original executor context
-            EJBClientContext.getContextManager().setThreadDefault(executorEJBClientContext);
-            Discovery.getContextManager().setThreadDefault(executorDiscovery);
-            AuthenticationContext.getContextManager().setThreadDefault(executorAuthenticationContext);
+                // reset the original executor context
+                EJBClientContext.getContextManager().setThreadDefault(executorEJBClientContext);
+                Discovery.getContextManager().setThreadDefault(executorDiscovery);
+                AuthenticationContext.getContextManager().setThreadDefault(executorAuthenticationContext);
+            }
         };
         return callerContextTask;
     }

@@ -73,23 +73,27 @@ class RemoteEJBReceiver extends EJBReceiver {
 
     final IoFuture.HandlingNotifier<ConnectionPeerIdentity, EJBReceiverInvocationContext> notifier = new IoFuture.HandlingNotifier<ConnectionPeerIdentity, EJBReceiverInvocationContext>() {
         public void handleDone(final ConnectionPeerIdentity peerIdentity, final EJBReceiverInvocationContext attachment) {
-            serviceHandle.getClientService(peerIdentity.getConnection(), OptionMap.EMPTY).addNotifier((ioFuture, attachment1) -> {
-                final EJBClientChannel ejbClientChannel;
-                try {
+            serviceHandle.getClientService(peerIdentity.getConnection(), OptionMap.EMPTY).addNotifier(
+                    new IoFuture.Notifier<EJBClientChannel, EJBReceiverInvocationContext>() {
 
-                    ejbClientChannel = ioFuture.getInterruptibly();
-                } catch (IOException e) {
-                    // should generally not be possible but we should handle it cleanly regardless
-                    attachment1.requestFailed(new RequestSendFailedException(e + "@" + peerIdentity.getConnection().getPeerURI(), false), retryExecutorWrapper.getExecutor(peerIdentity.getConnection().getEndpoint().getXnioWorker()));
-                    return;
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    attachment1.requestFailed(new RequestSendFailedException(e + "@" + peerIdentity.getConnection().getPeerURI(), false), retryExecutorWrapper.getExecutor(peerIdentity.getConnection().getEndpoint().getXnioWorker()));
-                    return;
-                }
-                attachment1.getClientInvocationContext().putAttachment(EJBCC_KEY, ejbClientChannel);
-                ejbClientChannel.processInvocation(attachment1, peerIdentity);
-            }, attachment);
+                        public void notify(IoFuture<? extends EJBClientChannel> ioFuture, EJBReceiverInvocationContext attachment1) {
+                            final EJBClientChannel ejbClientChannel;
+                            try {
+
+                                ejbClientChannel = ioFuture.getInterruptibly();
+                            } catch (IOException e) {
+                                // should generally not be possible but we should handle it cleanly regardless
+                                attachment1.requestFailed(new RequestSendFailedException(e + "@" + peerIdentity.getConnection().getPeerURI(), false), retryExecutorWrapper.getExecutor(peerIdentity.getConnection().getEndpoint().getXnioWorker()));
+                                return;
+                            } catch (InterruptedException e) {
+                                Thread.currentThread().interrupt();
+                                attachment1.requestFailed(new RequestSendFailedException(e + "@" + peerIdentity.getConnection().getPeerURI(), false), retryExecutorWrapper.getExecutor(peerIdentity.getConnection().getEndpoint().getXnioWorker()));
+                                return;
+                            }
+                            attachment1.getClientInvocationContext().putAttachment(EJBCC_KEY, ejbClientChannel);
+                            ejbClientChannel.processInvocation(attachment1, peerIdentity);
+                        }
+                    }, attachment);
 
         }
 
